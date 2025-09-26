@@ -11,7 +11,7 @@ def main():
     THRESHOLD: float = 4.5
     HOUR_OFFSET: int = 0
     MINUTE_OFFSET: int = 15
-    SLEEP_INTERVAL: int = 10
+    SLEEP_INTERVAL: int = 5  # Lower at your own risk, you can be banned from the site
     INITIAL_PATTERN = r"<pre>.*</pre>"
     MAIN_PATTERN = r"""^(\d{4}\.\d{2}\.\d{2})\s*(\d{2}:\d{2}:\d{2})
                         \s*\d{2}\.\d{4}\s*\d{2}\.\d{4}\s*\d{1,2}\.\d{1,2}\s*
