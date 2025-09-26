@@ -11,7 +11,7 @@ You can change this behaviour by changing the code below
 THRESHOLD: float = 4.5
 ```
 
-Script sends a POST request at ("ntfy.sh/kandilli").
+Script sends a POST request at <ntfy.sh/kandilli>.
 You can change this behaviour by changing the code below
 
 ```python

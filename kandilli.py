@@ -17,17 +17,16 @@ def main():
                         \s*\d{2}\.\d{4}\s*\d{2}\.\d{4}\s*\d{1,2}\.\d{1,2}\s*
                         (-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)
                         \s*(\S*\s\S*|\S)"""
-
     HOUR_OFFSET += MINUTE_OFFSET // 60
     MINUTE_OFFSET = MINUTE_OFFSET % 60
+    REQUEST_HEADER = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
 
     now = datetime.now()
     found = False
     offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
     error_counter = 1
-    REQUEST_HEADER = {
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
 
     while True:
         try:
@@ -81,7 +80,6 @@ def main():
                         )
                     except requests.exceptions.RequestException as e:
                         raise SystemExit(e)
-
         if found:
             print(found)
             sleep(MINUTE_OFFSET * HOUR_OFFSET * 60)
