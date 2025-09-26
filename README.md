@@ -1,10 +1,10 @@
 # Kandilli
 
-A quick script to get notified whenever there is a earthquake near Türkiye.
+A quick script to get notified whenever there is an earthquake near Türkiye.
 
 ## Quickstart
 
-For default script is set to only notify for earthquakes greater than 4.5 ML
+For default, script is set to only notify for earthquakes greater than 4.5 ML
 You can change this behaviour by changing the code below
 
 ```python
