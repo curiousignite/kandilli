@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
+import re
 from datetime import datetime, timedelta
+from itertools import islice
 from time import sleep
 import requests
-import re
-from itertools import islice
 
 
 def main():
@@ -24,25 +24,41 @@ def main():
     now = datetime.now()
     found = False
     offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
+    error_counter = 1
+    REQUEST_HEADER = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
 
     while True:
         try:
             r = requests.get("http://www.koeri.boun.edu.tr/scripts/lst0.asp")
         except requests.exceptions.Timeout:
             print("Timeout exception occured")
-            sleep(10)
+            data = "Timeout exception occured"
+            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            sleep(SLEEP_INTERVAL * error_counter)
+            error_counter += 1
             continue
         except requests.exceptions.TooManyRedirects:
             print("Too many redirects")
-            sleep(10)
+            data = "Too many redirects"
+            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            sleep(SLEEP_INTERVAL * error_counter)
+            error_counter += 1
             continue
         except requests.exceptions.ConnectionError:
             print("Too many redirects")
-            sleep(10)
+            data = "Too many redirects"
+            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            sleep(SLEEP_INTERVAL * error_counter)
+            error_counter += 1
             continue
         except requests.exceptions.RequestException as e:
+            data = "Fatal error"
+            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
             raise SystemExit(e)
 
+        error_counter = 1
         html_text = r.text
         between_pre = re.findall(
             INITIAL_PATTERN, html_text, flags=re.MULTILINE | re.DOTALL
@@ -58,12 +74,14 @@ def main():
                     and group[0] >= offset_time.strftime("%Y.%m.%d")
                     and group[1] >= offset_time.strftime("%H:%M:%S")
                 ):
-                    headers = {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    }
                     data = f"Saat {group[1]}'de {group[5]} bölgesinde {group[3]} büyüklüğünde bir deprem oldu!"
-                    requests.post("http://ntfy.sh/kandilli", headers=headers, data=data)
-                    found = True
+                    try:
+                        requests.post(
+                            "http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data
+                        )
+                    except requests.exceptions.RequestException as e:
+                        raise SystemExit(e)
+
         if found:
             print(found)
             sleep(MINUTE_OFFSET * HOUR_OFFSET * 60)
