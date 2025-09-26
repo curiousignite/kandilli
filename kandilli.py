@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from datetime import datetime, timedelta
 from time import sleep
 import requests
@@ -6,7 +8,7 @@ from itertools import islice
 
 
 def main():
-    THRESHOLD: float = 1.0
+    THRESHOLD: float = 4.5
     HOUR_OFFSET: int = 0
     MINUTE_OFFSET: int = 15
     SLEEP_INTERVAL: int = 10
@@ -20,9 +22,8 @@ def main():
     MINUTE_OFFSET = MINUTE_OFFSET % 60
 
     now = datetime.now()
-
+    found = False
     offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
-    print(offset_time)
 
     while True:
         try:
@@ -57,11 +58,18 @@ def main():
                     and group[0] >= offset_time.strftime("%Y.%m.%d")
                     and group[1] >= offset_time.strftime("%H:%M:%S")
                 ):
-                    # TODO: Implement a notification or messaging service
-                    print(
-                        f"Saat {group[1]}'de {group[5]} bölgesinde {group[3]} büyüklüğünde bir deprem oldu!"
-                    )
-        sleep(SLEEP_INTERVAL)
+                    headers = {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    }
+                    data = f"Saat {group[1]}'de {group[5]} bölgesinde {group[3]} büyüklüğünde bir deprem oldu!"
+                    requests.post("http://ntfy.sh/kandilli", headers=headers, data=data)
+                    found = True
+        if found:
+            print(found)
+            sleep(MINUTE_OFFSET * HOUR_OFFSET * 60)
+            found = False
+        else:
+            sleep(SLEEP_INTERVAL)
 
 
 if __name__ == "__main__":
