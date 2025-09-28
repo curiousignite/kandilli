@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
+import json
 import re
 from datetime import datetime, timedelta
 from itertools import islice
 from time import sleep
 import os
-import platform
 import requests
 
-DEBUG_FLAG: bool = True  # NOTE: FOR DEVELEOPMENT ONLY CHANGE TO `False` BEFORE USING
+DEBUG_FLAG: bool = False  # NOTE: FOR DEVELEOPMENT ONLY CHANGE TO `False` BEFORE USING
 KANDILLI_WEBSITE: str = "http://www.koeri.boun.edu.tr/scripts/lst0.asp"
+AFAD_API: str = "https://deprem.afad.gov.tr/apiv2/event/filter?"
 INITIAL_PATTERN = r"<pre>.*</pre>"
 MAIN_PATTERN = r"""^(\d{4}\.\d{2}\.\d{2})\s*(\d{2}:\d{2}:\d{2})
                     \s*\d{2}\.\d{4}\s*\d{2}\.\d{4}\s*\d{1,2}\.\d{1,2}\s*
@@ -24,54 +25,73 @@ THRESHOLD: float
 HOUR_OFFSET: int
 MINUTE_OFFSET: int
 SLEEP_INTERVAL: int
-TOTAL_SECONDS: int
-NTFY_KANDILLI: str
+NTFY_EARTHQUAKE: str
 NTFY_LOG: str
 
 if DEBUG_FLAG:
-    THRESHOLD = 0.0
-    HOUR_OFFSET = 0
+    THRESHOLD = 1.0
+    HOUR_OFFSET = 4
     MINUTE_OFFSET = 30
     SLEEP_INTERVAL = 60  # Lower at your own risk, you can be banned from the site
-    NTFY_KANDILLI = "http://100.88.78.22:1111/kandilli_debug"
+    NTFY_EARTHQUAKE = "http://100.88.78.22:1111/kandilli_debug"
     NTFY_LOG = "http://100.88.78.22:1111/kandilli_log_debug"
 else:
     THRESHOLD = 4.0
     HOUR_OFFSET = 0
     MINUTE_OFFSET = 15
     SLEEP_INTERVAL = 5  # Lower at your own risk, you can be banned from the site
-    NTFY_KANDILLI = "http://100.88.78.22:1111/kandilli"
+    NTFY_EARTHQUAKE = "http://100.88.78.22:1111/kandilli"
     NTFY_LOG = "http://100.88.78.22:1111/kandilli_log"
 
 TOTAL_SECONDS = (HOUR_OFFSET * 60 + MINUTE_OFFSET) * 60
 
 
-def get_html(error_counter: int) -> str:
+def get_data(url: str, error_counter: int = 1) -> str:
     try:
-        r = requests.get(KANDILLI_WEBSITE)
+        r = requests.get(url)
     except requests.exceptions.Timeout:
-        data = "Timeout exception occurred."
-        append_log("ERROR", data)
+        append_log("ERROR", "Timeout exception occurred.")
         sleep(SLEEP_INTERVAL * error_counter)
         return "error"
     except requests.exceptions.TooManyRedirects:
-        data = "Too many redirects"
-        append_log("ERROR", data)
+        append_log("ERROR", "Too many redirects")
         sleep(SLEEP_INTERVAL * error_counter)
         return "error"
     except requests.exceptions.ConnectionError:
-        data = "Connection Error occurred"
-        append_log("ERROR", data)
+        append_log("ERROR", "Connection Error occurred")
         sleep(SLEEP_INTERVAL * error_counter)
         return "error"
     except requests.exceptions.RequestException as e:
-        data = "Fatal Error"
-        append_log("ERROR", data)
+        append_log("ERROR", "Fatal Error")
         raise SystemExit(e)
     return r.text
 
 
-def parser(html_text: str):
+def parse_json() -> int:
+    now = datetime.now()
+    found = False
+    offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
+    url = AFAD_API + f"start={offset_time}"
+    url += f"&end={now}"
+    url += f"&minmag={THRESHOLD}"
+    url += "&magtype=ML"
+    json_unparsed: str = get_data(url)
+    parsed_json = json.JSONDecoder().decode(json_unparsed)
+    for line in parsed_json:
+        data = f"Saat {line['date'][11:]}'de {line['neighborhood'].upper()}-{line['location'].upper()} bölgesinde {line['magnitude']} büyüklüğünde bir deprem oldu!"
+        found = True
+        append_log("INFO", data, priority="urgent")
+    if not found:
+        if DEBUG_FLAG:
+            append_log(
+                "LOG", f"Nothing found, trying again in {SLEEP_INTERVAL} seconds"
+            )
+        return -1
+    else:
+        return 0
+
+
+def parse_html(html_text: str) -> int:
     now = datetime.now()
     found = False
     offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
@@ -92,19 +112,14 @@ def parser(html_text: str):
                 data = f"Saat {group[1]}'de {group[5]} bölgesinde {group[3]} büyüklüğünde bir deprem oldu!"
                 found = True
                 append_log("INFO", data, priority="urgent")
-    if found:
-        append_log(
-            "LOG",
-            f"Found, waiting for {str(TOTAL_SECONDS)} seconds",
-        )
-        sleep(TOTAL_SECONDS)
-        found = False
-    else:
+    if not found:
         if DEBUG_FLAG:
             append_log(
                 "LOG", f"Nothing found, trying again in {SLEEP_INTERVAL} seconds"
             )
-        sleep(SLEEP_INTERVAL)
+        return -1
+    else:
+        return 0
 
 
 def append_log(type: str, data: str, priority: str = "default") -> None:
@@ -117,7 +132,7 @@ def send_request(type: str, data: str, priority: str) -> None:
     try:
         if type == "INFO":
             NTFY_HEADER.update({"Title": "Deprem"})
-            requests.post(NTFY_KANDILLI, headers=NTFY_HEADER, data=data)
+            requests.post(NTFY_EARTHQUAKE, headers=NTFY_HEADER, data=data)
         else:
             NTFY_HEADER.update({"Title": "DEBUG"})
             requests.post(NTFY_LOG, headers=NTFY_HEADER, data=data)
@@ -126,12 +141,7 @@ def send_request(type: str, data: str, priority: str) -> None:
 
 
 def write_log(type, data) -> None:
-    # TODO:Check for other iOS and BSD later
-    if platform.system() == "Linux":
-        log_path = os.path.expanduser("~/.local/state/kandilli.log")
-    elif platform.system() == "Windows":
-        log_path = os.path.expanduser("%AppData%\\kandilli.log")
-
+    log_path = os.path.expanduser("~/.local/state/kandilli.log")
     print(datetime.now().strftime("%d.%m.%Y (%H:%M:%S)"), end="")
     print(" | ", end="")
     print(f"[{type}]: ", end="")
@@ -153,19 +163,36 @@ def main():
     error_counter = 1
     append_log("LOG", "Program started")
     while True:
-        html_text: str = get_html(error_counter)
-        if html_text == "error":
+        # TODO: This code is shit and needs fixing
+        html_text: str = get_data(KANDILLI_WEBSITE, error_counter)
+        json_text: str = get_data(AFAD_API, error_counter)
+        if html_text == "error" and json_text == "error":
+            error_counter += 1
+            sleep(error_counter * SLEEP_INTERVAL)
+        else:
+            result1 = parse_json()
+            result2 = parse_html(html_text)
+            if result1 == -1 and result2 == -1:
+                error_counter += 1
+                sleep(error_counter * SLEEP_INTERVAL)
+
+
+def main2():
+    error_counter = 1
+    append_log("LOG", "Program started")
+    while True:
+        json_text: str = get_data(AFAD_API, error_counter)
+        if json_text == "error":
             error_counter += 1
             continue
         else:
-            parser(html_text)
+            parse_json()
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        data = "Keyboard Interrupt"
-        append_log("LOG", data)
+        append_log("LOG", "Keyboard Interrupt")
     finally:
         append_log("LOG", "Program terminated")

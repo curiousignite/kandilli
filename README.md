@@ -32,5 +32,6 @@ requests.post("http://100.88.78.22:1111/kandilli", headers=headers, data=data)
 
 - [x] Redirect errors and logs to a different URL
 - [x] Save logs to a file
-- [ ] Use systemd services maybe?
-- [ ] Add other sources like AFAD or Google
+- [x] Add other sources like [AFAD](https://deprem.afad.gov.tr/event-service)
+- [ ] Improve the main loop. Now it doesn't wait for the other parsers cooldown
+- [ ] Windows implementation
