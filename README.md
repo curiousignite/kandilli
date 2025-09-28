@@ -24,6 +24,7 @@ requests.post("http://100.88.78.22:1111/kandilli", headers=headers, data=data)
 > [!NOTE]
 > Errors will be logged at <http://100.88.78.22:1111/kandilli>
 > Also at ~/.local/state/kandilli.log
+
 > [!WARNING]
 > This addresses are my local tailscale addresses so they won't work for you.
 
