@@ -34,27 +34,35 @@ def main():
         except requests.exceptions.Timeout:
             print("Timeout exception occured")
             data = "Timeout exception occured"
-            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            requests.post(
+                "http://ntfy.sh/kandilli_log", headers=REQUEST_HEADER, data=data
+            )
             sleep(SLEEP_INTERVAL * error_counter)
             error_counter += 1
             continue
         except requests.exceptions.TooManyRedirects:
             print("Too many redirects")
             data = "Too many redirects"
-            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            requests.post(
+                "http://ntfy.sh/kandilli_log", headers=REQUEST_HEADER, data=data
+            )
             sleep(SLEEP_INTERVAL * error_counter)
             error_counter += 1
             continue
         except requests.exceptions.ConnectionError:
             print("Too many redirects")
             data = "Too many redirects"
-            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            requests.post(
+                "http://ntfy.sh/kandilli_log", headers=REQUEST_HEADER, data=data
+            )
             sleep(SLEEP_INTERVAL * error_counter)
             error_counter += 1
             continue
         except requests.exceptions.RequestException as e:
             data = "Fatal error"
-            requests.post("http://ntfy.sh/kandilli", headers=REQUEST_HEADER, data=data)
+            requests.post(
+                "http://ntfy.sh/kandilli_log", headers=REQUEST_HEADER, data=data
+            )
             raise SystemExit(e)
 
         error_counter = 1

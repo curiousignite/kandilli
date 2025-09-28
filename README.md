@@ -20,3 +20,12 @@ headers = {
 }
 requests.post("http://ntfy.sh/kandilli", headers=headers, data=data)
 ```
+
+> [!NOTE]
+> Errors will be logged at <https://ntfy.sh/kandilli_log>
+
+## TODO
+
+- [x] Use systemd services maybe?
+- [ ] Redirect errors and logs to a different URL
+- [ ] Save logs to a file
