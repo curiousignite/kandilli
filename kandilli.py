@@ -7,22 +7,23 @@ from time import sleep
 import requests
 
 
-def main():
-    THRESHOLD: float = 4.5
-    HOUR_OFFSET: int = 0
-    MINUTE_OFFSET: int = 15
-    SLEEP_INTERVAL: int = 5  # Lower at your own risk, you can be banned from the site
-    INITIAL_PATTERN = r"<pre>.*</pre>"
-    MAIN_PATTERN = r"""^(\d{4}\.\d{2}\.\d{2})\s*(\d{2}:\d{2}:\d{2})
-                        \s*\d{2}\.\d{4}\s*\d{2}\.\d{4}\s*\d{1,2}\.\d{1,2}\s*
-                        (-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)
-                        \s*(\S*\s\S*|\S)"""
-    HOUR_OFFSET += MINUTE_OFFSET // 60
-    MINUTE_OFFSET = MINUTE_OFFSET % 60
-    REQUEST_HEADER = {
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
+THRESHOLD: float = 4.5
+HOUR_OFFSET: int = 0
+MINUTE_OFFSET: int = 15
+SLEEP_INTERVAL: int = 5  # Lower at your own risk, you can be banned from the site
+INITIAL_PATTERN = r"<pre>.*</pre>"
+MAIN_PATTERN = r"""^(\d{4}\.\d{2}\.\d{2})\s*(\d{2}:\d{2}:\d{2})
+                    \s*\d{2}\.\d{4}\s*\d{2}\.\d{4}\s*\d{1,2}\.\d{1,2}\s*
+                    (-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)\s*(-\.-|\d*\.\d*)
+                    \s*(\S*\s\S*|\S)"""
+HOUR_OFFSET += MINUTE_OFFSET // 60
+MINUTE_OFFSET = MINUTE_OFFSET % 60
+REQUEST_HEADER = {
+    "Content-Type": "application/x-www-form-urlencoded",
+}
 
+
+def main():
     now = datetime.now()
     found = False
     offset_time = now - timedelta(hours=+HOUR_OFFSET, minutes=+MINUTE_OFFSET)
@@ -89,7 +90,6 @@ def main():
                     except requests.exceptions.RequestException as e:
                         raise SystemExit(e)
         if found:
-            print(found)
             sleep(MINUTE_OFFSET * HOUR_OFFSET * 60)
             found = False
         else:
@@ -101,3 +101,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\nExited")
+        data = "Program stopped"
+        requests.post("http://ntfy.sh/kandilli_log", headers=REQUEST_HEADER, data=data)
